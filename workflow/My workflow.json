@@ -1,0 +1,824 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY",
+          "mode": "list",
+          "cachedResultName": "SignalGate",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2141957791,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit#gid=2141957791"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4d115a78-8b62-4dc0-b679-772f21eb167a",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "8884DUAUN2DUAH9a",
+          "name": "Google Sheets Trigger OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "=Name: {{$json.Name}}\nEmail: {{$json.Email}}\nX Handle: {{$json[\"X handle\"]}}\nExperience Level: {{$json[\"Experience Level\"]}}\nSignal Score: {{$json[\"Signal Score\"]}}\n\nYou are an AI screening assistant.\n\nReturn ONLY valid JSON:\n{\n  \"score\": 0-100,\n  \"decision\": \"accept | reject | review\",\n  \"reason\": \"short explanation\"\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI screening assistant that evaluates candidate applications.  Your job is to assess candidates based on the provided data and produce consistent, objective scoring.  RULES: - Return ONLY valid JSON - Do NOT include markdown, explanations, or extra text - Be strict, consistent, and unbiased - Use the scoring scale carefully (do not inflate scores) - Base decisions only on the provided data  SCORING GUIDELINES: - 80–100: Strong candidate, clear relevance and motivation - 60–79: Good candidate, some strengths but not perfect - 40–59: Average candidate, needs review - 0–39: Weak candidate, not suitable  OUTPUT FORMAT (MANDATORY): {   \"score\": number,   \"decision\": \"accept | review | reject\",   \"reason\": \"short, factual explanation\",   \"tags\": [\"string\"] }"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        416,
+        0
+      ],
+      "id": "afdb4764-dafa-498c-899d-c2d7b5ac8e1c",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        192
+      ],
+      "id": "97f9d92e-a905-4a18-ae08-68b4527b2166",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "UOx08YiNt3ZYYwpl",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "71bd903a-095d-4d09-b0bb-768b6accad33",
+              "name": "Name",
+              "value": "={{ $json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "5be55572-d302-4731-9136-6630cb1fc192",
+              "name": "Timestamp",
+              "value": "={{ $json.Timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "9de74914-12f0-4d31-83e3-9813a7d863d2",
+              "name": "Email",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "8f69ef4a-1e27-4567-87f0-41978fb84a7c",
+              "name": "Experience Level",
+              "value": "={{ $json['Experience Level'] }}",
+              "type": "string"
+            },
+            {
+              "id": "6be0d5f9-67e1-4221-9d2d-6c8c579340ff",
+              "name": "Signal Score",
+              "value": "={{ $json['Signal Score'] }}",
+              "type": "number"
+            },
+            {
+              "id": "24c91344-352a-4f4d-acea-e6a097254291",
+              "name": "X handle",
+              "value": "={{ $json['X handle'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a9c2b87d-6b2f-4791-b2fd-c5c5b31f6df2",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.text;\n\nif (!raw) {\n  throw new Error(\"No AI output found in text field\");\n}\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (error) {\n  throw new Error(\"Invalid JSON from AI: \" + raw);\n}\n\nreturn [\n  {\n    json: parsed\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "52eb86f2-e48e-4a84-9ce3-1f03f5b929aa",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f94b76d5-efdb-48d2-85c5-891c950b59cb",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        976,
+        0
+      ],
+      "id": "68a6524a-9e7b-4950-ac28-3aa94ab051f2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e95670ad-31c6-405d-b108-c07f5d53a786",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 40,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1184,
+        96
+      ],
+      "id": "ba48a5de-371d-4b6a-96e2-0ce0768fbfe0",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY",
+          "mode": "list",
+          "cachedResultName": "SignalGate",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2141957791,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit#gid=2141957791"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Edit Fields').item.json.Email }}",
+            "Status": "Reject"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "X handle",
+              "displayName": "X handle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Experience Level",
+              "displayName": "Experience Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Motivation",
+              "displayName": "Motivation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Signal Score",
+              "displayName": "Signal Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1392,
+        192
+      ],
+      "id": "d646fbea-46c3-442a-a2ab-c0f892ad42b5",
+      "name": "Reject",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "npAfuVGNlQql5n6j",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY",
+          "mode": "list",
+          "cachedResultName": "SignalGate",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2141957791,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit#gid=2141957791"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Edit Fields').item.json.Email }}",
+            "Status": "Review"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "X handle",
+              "displayName": "X handle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Experience Level",
+              "displayName": "Experience Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Motivation",
+              "displayName": "Motivation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Signal Score",
+              "displayName": "Signal Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "d936901b-874f-4515-8723-c3f5a4634494",
+      "name": "Review",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "npAfuVGNlQql5n6j",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY",
+          "mode": "list",
+          "cachedResultName": "SignalGate",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2141957791,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1s3bAOp_F8WkqA0kaG4CYbHGY19lUsRzK2EyOOl_rmYY/edit#gid=2141957791"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{$json.Email}}",
+            "Status": "Accepted"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "X handle",
+              "displayName": "X handle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Experience Level",
+              "displayName": "Experience Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Motivation",
+              "displayName": "Motivation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Signal Score",
+              "displayName": "Signal Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1200,
+        -176
+      ],
+      "id": "349811c7-1fa8-4943-8721-f843cda1e2cd",
+      "name": "Accept",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "npAfuVGNlQql5n6j",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5985680170",
+        "text": "=🚨 New Ambassador Application Screened\n\nName:{{ $('Edit Fields').item.json.Name }}\n\nEmail: {{$json.Email}}\n\nX:{{ $('Edit Fields').item.json[\"X handle\"] }} \n\nExperience: {{ $('Edit Fields').item.json[\"Experience Level\"] }} \n\nSignal Score:{{ $('Edit Fields').item.json[\"Signal Score\"] }}   \n\nAI Score:{{ $('Code in JavaScript').item.json.score }} \n\nDecision: {{ $('Code in JavaScript').item.json.decision }} \n\nReason:{{ $('Code in JavaScript').item.json.reason }}  ",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1664,
+        80
+      ],
+      "id": "654f7108-8628-4043-844e-c96bad0d20bb",
+      "name": "TG Notification",
+      "webhookId": "28910a9d-2fea-40d0-90e4-6c2aa01346fb",
+      "credentials": {
+        "telegramApi": {
+          "id": "2y70SFQKOlsMFTdU",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Google Sheets Trigger": [
+      {
+        "json": {
+          "Timestamp": "6/28/2026 19:24:39",
+          "Name": "Inyens James ",
+          "Email": "inyens@gmail.com",
+          "X handle": "@inyens",
+          "Experience Level": "Intermediate",
+          "Motivation": "For fun",
+          "Signal Score": 2,
+          "Status": ""
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Accept",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept": {
+      "main": [
+        [
+          {
+            "node": "TG Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review": {
+      "main": [
+        [
+          {
+            "node": "TG Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reject": {
+      "main": [
+        [
+          {
+            "node": "TG Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "79f30162-535f-48d8-8837-4cd6ced4a430",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "945e89dc8d40c9e7447cae12ad1daa4f2cd9a312ea72b0fdbbb5e355d3d67804"
+  },
+  "nodeGroups": [],
+  "id": "AK7mZbfMtONFuZW5",
+  "tags": []
+}
